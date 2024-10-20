@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 
 services:
   reverse-proxy:
@@ -23,7 +23,7 @@ services:
       MYSQL_USER: test_user
       MYSQL_PASSWORD: test_password
     volumes:
-        - ./database/volume:/var/lib/mysql
+      - ./database/volume:/var/lib/mysql
     hostname: database.cc.localhost
     labels:
       - traefik.tcp.routers.mysql.entrypoints=mysql
@@ -34,6 +34,8 @@ services:
 
   api:
     image: php:8.3-apache
+    build:
+      context: ./api
     container_name: api
     depends_on:
       - db

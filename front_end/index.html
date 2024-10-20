@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Knowledge City</title>
+    <link rel="stylesheet" href="./css/output.css" />
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"
+    ></script>
+  </head>
+
+  <body class="min-h-full" x-data="initPage()">
+    <header class="my-6">
+      <h1
+        class="font-extrabold text-3xl text-center"
+        x-text="selectedCategory ? selectedCategory.name : 'Course Catalog'"
+      ></h1>
+    </header>
+    <section id="content">
+      <aside>
+        <template x-if="categoriesTree && categoriesTree.length">
+          <ul>
+            <!-- First Level -->
+            <template x-for="firstLevel in categoriesTree">
+              <li class="mb-4 last:mb-0">
+                <span
+                  class="cursor-pointer"
+                  :class="{ 'selected-category': selectedCategory === firstLevel }"
+                  @click="showOnlyCategoryCourses(firstLevel)"
+                  x-text="formatCategoryName(firstLevel)"
+                ></span>
+                <!-- Second Level -->
+                <template
+                  x-if="firstLevel.children && firstLevel.children.length"
+                >
+                  <ul class="ml-4">
+                    <!-- Third Level -->
+                    <template x-for="secondLevel in firstLevel.children">
+                      <li class="mb-1">
+                        <span
+                          class="cursor-pointer"
+                          :class="{ 'selected-category': selectedCategory === secondLevel }"
+                          @click="showOnlyCategoryCourses(secondLevel)"
+                          x-text="formatCategoryName(secondLevel)"
+                        ></span>
+                        <!-- Fourth Level -->
+                        <template
+                          x-if="secondLevel.children && secondLevel.children.length"
+                        >
+                          <template x-for="thirdLevel in secondLevel.children">
+                            <ul class="ml-4">
+                              <li class="mb-1">
+                                <span
+                                  class="cursor-pointer"
+                                  :class="{ 'selected-category': selectedCategory === thirdLevel }"
+                                  @click="showOnlyCategoryCourses(thirdLevel)"
+                                  x-text="formatCategoryName(thirdLevel)"
+                                ></span>
+                                <template
+                                  x-if="thirdLevel.children && thirdLevel.children.length"
+                                >
+                                  <template
+                                    x-for="fourthLevel in thirdLevel.children"
+                                  >
+                                    <ul class="ml-4">
+                                      <li class="mb-1">
+                                        <span
+                                          class="cursor-pointer"
+                                          :class="{ 'selected-category': selectedCategory === fourthLevel }"
+                                          @click="showOnlyCategoryCourses(fourthLevel)"
+                                          x-text="formatCategoryName(fourthLevel)"
+                                        ></span>
+                                      </li>
+                                    </ul>
+                                  </template>
+                                </template>
+                              </li>
+                            </ul>
+                          </template>
+                        </template>
+                      </li>
+                    </template>
+                  </ul>
+                </template>
+              </li>
+            </template>
+          </ul>
+        </template>
+      </aside>
+      <main>
+        <template x-if="coursesShown && coursesShown.length">
+          <div class="flex flex-row flex-wrap gap-6">
+            <template x-for="course in coursesShown">
+              <div class="course-card">
+                <img
+                  class="course-img"
+                  :src="course.preview"
+                  alt="Course Preview"
+                />
+                <div class="course-content">
+                  <p class="course-title" x-text="course.name"></p>
+                  <p
+                    class="course-description"
+                    x-text="formatDescription(course.description)"
+                  ></p>
+                </div>
+                <div class="course-category">
+                  <p x-text="course.main_category_name"></p>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+        <template x-if="allCourses?.length && !coursesShown.length">
+          <p class="font-bold text-gray-500">
+            No courses to show for this category
+          </p>
+        </template>
+      </main>
+    </section>
+
+    <script>
+      function initPage() {
+        return {
+          categoriesTree: [],
+          categories: [],
+          allCourses: [],
+          coursesShown: [],
+          selectedCategory: null,
+          init() {
+            fetch("http://api.cc.localhost/categories")
+              .then((response) => response.json())
+              .then((categories) => {
+                this.categories = categories;
+                this.categoriesTree = this.getCategoriesTree();
+                this.fetchCourses();
+              });
+          },
+          fetchCourses() {
+            fetch("http://api.cc.localhost/courses")
+              .then((response) => response.json())
+              .then((courses) => {
+                this.allCourses = courses;
+                // By default all courses are shown
+                this.coursesShown = courses;
+              });
+          },
+          getCategoriesTree() {
+            const categoryMap = {};
+
+            // Group categories by parent_id
+            this.categories.forEach((category) => {
+              const parentId = category.parent_id || "root"; // Use 'root' for categories without parent_id
+              if (!categoryMap[parentId]) {
+                categoryMap[parentId] = [];
+              }
+              categoryMap[parentId].push(category);
+            });
+
+            // Build the tree
+            function buildTree(parentId) {
+              return (categoryMap[parentId] || []).map((category) => ({
+                ...category,
+                children: buildTree(category.id),
+              }));
+            }
+
+            return buildTree("root");
+          },
+          formatDescription(description) {
+            let descriptionArray = description.split(" ");
+            if (descriptionArray.length > 10) {
+              descriptionArray = descriptionArray.slice(0, 20);
+              descriptionArray.push("...");
+            }
+            return descriptionArray.join(" ");
+          },
+          formatCategoryName(category) {
+            if (category.count_of_courses === 0) {
+              return category.name;
+            }
+            return category.name + " (" + category.count_of_courses + ")";
+          },
+          showOnlyCategoryCourses(category) {
+            this.selectedCategory = category;
+            let coursesToShow = [];
+            let childrenCategoryIds = [];
+            getChildrenIds(category.children);
+
+            function getChildrenIds(children) {
+              children.forEach((child) => {
+                childrenCategoryIds.push(child.id);
+                if (child.children && child.children.length) {
+                  getChildrenIds(child.children);
+                }
+              });
+            }
+
+            if (category.count_of_courses > 0) {
+              coursesToShow.push(
+                ...this.allCourses.filter((course) =>
+                  [category.id, ...childrenCategoryIds].includes(
+                    course.main_category_id
+                  )
+                )
+              );
+            }
+
+            this.coursesShown = coursesToShow;
+          },
+        };
+      }
+    </script>
+  </body>
+</html>

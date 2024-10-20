@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-[#dedddd];
+
+  #content {
+    @apply container flex flex-col md:flex-row gap-4 lg:gap-10;
+
+    > aside {
+      @apply min-w-[250px] lg:min-w-[300px];
+    }
+
+    > main {
+      @apply flex-1;
+    }
+  }
+}
+
+.course-card {
+  @apply w-full lg:max-w-[270px] rounded-md bg-white shadow-sm relative;
+
+  .course-img {
+    @apply w-full  rounded-t-md;
+  }
+
+  .course-content {
+    @apply p-4;
+
+    .course-title {
+      @apply text-lg font-semibold whitespace-nowrap overflow-hidden overflow-ellipsis;
+    }
+
+    .course-description {
+      @apply text-sm text-gray-500;
+    }
+  }
+
+  .course-category {
+    @apply absolute top-2 right-2 px-1 bg-white rounded shadow-sm text-xs;
+  }
+}
+
+.selected-category {
+  @apply border-l-4 pl-1 border-yellow-600;
+}
